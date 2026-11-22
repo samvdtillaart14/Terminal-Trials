@@ -51,7 +51,8 @@
   --road: #121a22; --road-edge: #3a4a5a; --dash: #3ddc97; --sign: #0a0f14; --sign-fg: #3ddc97; --locked: #556575;
   --c1: #4fc3ff; --c2: #ff7a59; --c3: #b48cff; color-scheme: dark }
 
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; overflow-x: clip; overscroll-behavior: none; }
+
 body { background: var(--bg); color: var(--fg); font: 16px/1.5 var(--sans);
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px; box-sizing: border-box; }
 .frame { height: calc(100vh - 40px); height: calc(100dvh - 40px); box-sizing: border-box; padding: 20px; border: 2px solid var(--line); border-radius: 6px; background: var(--bg); overflow: hidden; display: flex; flex-direction: column; position: relative; }
@@ -282,8 +283,8 @@ code.gc { cursor: help; }
 .tip { position: sticky; bottom: 0; z-index: 6; display: flex; gap: 8px; align-items: flex-start; background: var(--surface);
   border: 2px dashed var(--line); border-radius: 6px; padding: 7px 12px; font-size: .82rem; line-height: 1.4; }
 .tip.in-les { position: static; }
-.tip.home-tip { justify-self: end; max-width: 260px; font-size: .74rem; padding: 6px 26px 6px 9px; margin-right: -8px; position: sticky; }
-.tip-x { position: absolute; top: 2px; right: 4px; border: 0; background: none; color: var(--muted); font: 700 1rem var(--mono); cursor: pointer; padding: 0 4px; line-height: 1.2; }
+.tip.home-tip { position: relative; bottom: auto; justify-self: stretch; max-width: none; margin: 0; font-size: .74rem; padding: 6px 34px 6px 9px; }
+.tip-x { position: absolute; top: 0; right: 0; min-width: 34px; min-height: 34px; border: 0; background: none; color: var(--muted); font: 700 1rem var(--mono); cursor: pointer; padding: 0 4px; line-height: 1.2; }
 .tip-x:hover { color: var(--fg); }
 .tip-ic { flex: none; font-size: 1rem; line-height: 1.3; }
 .tip kbd { font: .72rem var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg); }
@@ -326,6 +327,10 @@ h2 { font-weight: 700; }
 </style>
 <style>
 /* ===== telefoonlayout (webapp) ===== */
+/* alles staat vast: niets kan horizontaal verschuiven */
+.frame { overflow: clip; touch-action: pan-y; }
+.layout { overflow-x: hidden; touch-action: pan-y; overscroll-behavior: contain; }
+.roadwrap { overflow-x: clip; }
 :root { padding-top: 0; padding-bottom: 0; }
 .tabbar { display: none; }
 @media (max-width: 860px) {
@@ -356,7 +361,6 @@ h2 { font-weight: 700; }
   .backbtn { bottom: calc(156px + env(safe-area-inset-bottom, 0px)); }
   .sset .keylist, .sset small:has(+ .keylist) { display: none; }
   .scrollhint { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
-  .tip.home-tip { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); max-width: 72%; }
   h1 { font-size: 1.2rem; }
   .head { padding-top: 4px; }
   .top .stats { gap: 10px; font-size: .78rem; }
@@ -838,13 +842,12 @@ function home() {
   });
   app.innerHTML = `<div class="head"><div class="top"><h1>Terminal Trials</h1>
     <div class="stats"><span class="stat xp">★ ${st.xp} XP</span><span class="stat" style="color:var(--primary)" title="Voortgang naar Linux Mastery">${pct}% Linux Mastery</span><span class="stat" style="color:var(--muted)" title="Ingeschat niveau">Niveau: ${LVN[st.set.lvl]}</span></div></div>
-    <p class="next">${cur < 0 ? 'Je hebt <b>Linux Mastery</b> bereikt. Alle haltes blijven open om te herhalen.' : `Volgende halte: <b>${ST[cur].naam}</b>`}</p></div>
+    <p class="next">${cur < 0 ? 'Je hebt <b>Linux Mastery</b> bereikt. Alle haltes blijven open om te herhalen.' : `Volgende halte: <b>${ST[cur].naam}</b>`}</p>${tipOff() ? '' : tipBox(cur < 0 ? -1 : ST[cur].ch, 'home-tip')}</div>
     <div class="roadwrap"><svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <path class="r-edge" d="${d}" stroke-width="62"/><path class="r-asph" d="${d}" stroke-width="50"/>
       <path class="r-dash" d="${d}" stroke-width="3" stroke-dasharray="16 14"/>
       <path class="r-done" d="${dDone}" stroke-width="5"/>
-    </svg>${marks}</div>
-    ${tipBox(cur < 0 ? -1 : ST[cur].ch, 'home-tip')}`;
+    </svg>${marks}</div>`;
   if (from !== pk) walkPingo(from, pk, pts, segs, W, H);
   st.pk = pk; save(); setTimeout(checkBack, 60);
   const cp = app.querySelector('.pin.cur'); if (cp && !document.activeElement.closest('.side')) cp.focus({ preventScroll: true });
@@ -868,7 +871,12 @@ const TIPS = [
    3:['Combineer wat je kent: <code>find</code>, <code>grep</code> en <code>|</code> samen lossen veel op.','<code>history | grep ssh</code> vindt een commando dat je eerder gebruikte.','Schrijf terugkerende stappen in een script en maak het uitvoerbaar met <code>chmod +x</code>.'] }
 ];
 const tipFor = ch => { const l = TIPS[ch >= 0 ? CH[ch].tip : 3][TIER[st.set.lvl]] || TIPS[3][2]; return T(l[Math.floor(Math.random() * l.length)]); };
-const tipBox = (ch, extra) => `<div class="tip ${extra || ''}"><span class="tip-ic" aria-hidden="true">[i]</span><span><b>Tip:</b> ${tipFor(ch)}</span>${extra === 'home-tip' ? '<button class="tip-x" type="button" aria-label="Tip sluiten" title="Tip sluiten" onclick="this.parentElement.hidden=true">×</button>' : ''}</div>`;
+// weggeklikte tip blijft de rest van de dag weg
+const tipKey = () => 'tt-tip-off-' + new Date().toDateString();
+let tipClosed = false;
+const tipOff = () => { if (tipClosed) return true; try { return localStorage.getItem(tipKey()) === '1'; } catch (e) { return false; } };
+function closeTip(btn) { tipClosed = true; try { localStorage.setItem(tipKey(), '1'); } catch (e) {} btn.parentElement.remove(); }
+const tipBox = (ch, extra) => `<div class="tip ${extra || ''}"><span class="tip-ic" aria-hidden="true">[i]</span><span><b>Tip:</b> ${tipFor(ch)}</span>${extra === 'home-tip' ? '<button class="tip-x" type="button" aria-label="Tip sluiten" title="Tip sluiten" onclick="closeTip(this)">×</button>' : ''}</div>`;
 
 let L;
 function lesson(i) {
@@ -1256,6 +1264,9 @@ function glossify(root) {
   });
 }
 // zwevende uitlegballon
+// vangnet: als de browser toch horizontaal schuift (focus, swipe), direct terugzetten
+['.frame', '.layout'].forEach(q => { const el = document.querySelector(q); if (el) el.addEventListener('scroll', () => { if (el.scrollLeft) el.scrollLeft = 0; }, { passive: true }); });
+window.addEventListener('scroll', () => { if (scrollX) scrollTo(0, scrollY); }, { passive: true });
 const gtip = document.createElement('div'); gtip.className = 'gtip'; gtip.hidden = true; document.body.appendChild(gtip);
 function showTip(el) {
   gtip.textContent = el.dataset.tip; gtip.hidden = false;
