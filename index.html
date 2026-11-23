@@ -207,7 +207,7 @@ h2 { font-size: 1.35rem; }
 .bar i { display: block; height: 100%; background: var(--primary); border-radius: 2px; transition: width .3s; }
 .kind { text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; font-weight: 800; color: var(--primary); margin: 0; }
 .q { font-size: 1.2rem; font-weight: 700; margin: 0; }
-.q code, .opt code, .tip code { font-family: var(--mono); font-size: .9em; background: var(--surface); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; }
+.q code, .opt code { font-family: var(--mono); font-size: .9em; background: var(--surface); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; }
 
 .term { background: var(--term-bg); color: var(--term-fg); border-radius: 6px; padding: 14px; font: 14px/1.6 var(--mono);
   overflow-x: auto; min-width: 0; }
@@ -280,14 +280,6 @@ code.gc { cursor: help; }
 
 .done-card { text-align: center; display: grid; gap: 14px; justify-items: center; padding-top: 30px; }
 .big { font: 600 3rem var(--display); color: var(--xp); }
-.tip { position: sticky; bottom: 0; z-index: 6; display: flex; gap: 8px; align-items: flex-start; background: var(--surface);
-  border: 2px dashed var(--line); border-radius: 6px; padding: 7px 12px; font-size: .82rem; line-height: 1.4; }
-.tip.in-les { position: static; }
-.tip.home-tip { position: relative; bottom: auto; justify-self: stretch; max-width: none; margin: 0; font-size: .74rem; padding: 6px 34px 6px 9px; }
-.tip-x { position: absolute; top: 0; right: 0; min-width: 34px; min-height: 34px; border: 0; background: none; color: var(--muted); font: 700 1rem var(--mono); cursor: pointer; padding: 0 4px; line-height: 1.2; }
-.tip-x:hover { color: var(--fg); }
-.tip-ic { flex: none; font-size: 1rem; line-height: 1.3; }
-.tip kbd { font: .72rem var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg); }
 button:focus-visible, input:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
 .toast { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 20;
   width: min(320px, calc(100vw - 32px)); background: var(--ok-bg); border: 2px solid var(--primary); border-radius: 6px;
@@ -297,7 +289,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--primary); o
 .toast .term { padding: 8px 10px; font-size: 12px; }
 /* hacker-laag */
 .frame { background-color: var(--bg); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 28px 28px; border-width: 1px; }
-.side, .tip, .set, .opt, .tile, .lbl, .osel, .seg button, .tg, .gear, .menu-btn { border-width: 1px; }
+.side, .set, .opt, .tile, .lbl, .osel, .seg button, .tg, .gear, .menu-btn { border-width: 1px; }
 h1 { font-size: 1.45rem; font-weight: 700; letter-spacing: -.01em; }
 h1::before { content: "> "; color: var(--primary); }
 h1::after { content: "_"; color: var(--primary); animation: blink 1.1s steps(1) infinite; }
@@ -320,7 +312,6 @@ h2 { font-weight: 700; }
 .r-dash { filter: drop-shadow(0 0 3px var(--dash)); }
 .r-done { filter: drop-shadow(0 0 5px var(--primary)); }
 .term { border: 1px solid var(--line); box-shadow: inset 0 0 30px rgba(0,0,0,.5); }
-.tip-ic { font: 700 .8rem var(--mono); color: var(--primary); }
 .big { font-family: var(--mono); }
 .toast { border-width: 1px; box-shadow: 0 0 22px color-mix(in srgb, var(--primary) 30%, transparent); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } h1::after { animation: none; } }
@@ -783,18 +774,24 @@ const norm = s => s.trim().replace(/\s+/g,' ');
 const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
 
 // pinguin loopt over de weg van de vorige naar de nieuwe halte, en het beeld scrolt mee
+// scroll het pad zo dat de pinguin midden in beeld staat
+function centerOnPingo() {
+  const go = () => { const pg = document.getElementById('pingo'); if (!pg || view !== 'home') return;
+    const lr = layoutEl.getBoundingClientRect(), r = pg.getBoundingClientRect();
+    layoutEl.scrollTop += (r.top + r.height / 2) - (lr.top + lr.height / 2); checkBack(); };
+  go(); requestAnimationFrame(go);
+}
 function walkPingo(from, to, pts, segs, W, H) {
   const pg = document.getElementById('pingo'), svg = app.querySelector('.roadwrap > svg');
   const place = p => { pg.style.left = (p.x / W * 100).toFixed(2) + '%'; pg.style.top = (p.y / H * 100).toFixed(2) + '%'; };
-  if (to < from || matchMedia('(prefers-reduced-motion: reduce)').matches) { place(pts[to]); return; }
+  if (to < from || matchMedia('(prefers-reduced-motion: reduce)').matches) { place(pts[to]); centerOnPingo(); return; }
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('d', `M${pts[from].x},${pts[from].y} ` + segs.slice(from, to).join(' '));
   path.style.stroke = 'none'; svg.appendChild(path);
   const len = path.getTotalLength(), dur = Math.min(3200, Math.max(1300, len * 4));
   pg.style.transition = 'none'; pg.classList.add('walk');
   // eerst het beginpunt in beeld brengen
-  const lr0 = layoutEl.getBoundingClientRect(), r0 = pg.getBoundingClientRect();
-  layoutEl.scrollTop += r0.top - (lr0.top + lr0.height / 2);
+  centerOnPingo();
   let t0;
   const step = now => {
     if (!t0) t0 = now;
@@ -842,41 +839,19 @@ function home() {
   });
   app.innerHTML = `<div class="head"><div class="top"><h1>Terminal Trials</h1>
     <div class="stats"><span class="stat xp">★ ${st.xp} XP</span><span class="stat" style="color:var(--primary)" title="Voortgang naar Linux Mastery">${pct}% Linux Mastery</span><span class="stat" style="color:var(--muted)" title="Ingeschat niveau">Niveau: ${LVN[st.set.lvl]}</span></div></div>
-    <p class="next">${cur < 0 ? 'Je hebt <b>Linux Mastery</b> bereikt. Alle haltes blijven open om te herhalen.' : `Volgende halte: <b>${ST[cur].naam}</b>`}</p>${tipOff() ? '' : tipBox(cur < 0 ? -1 : ST[cur].ch, 'home-tip')}</div>
+    <p class="next">${cur < 0 ? 'Je hebt <b>Linux Mastery</b> bereikt. Alle haltes blijven open om te herhalen.' : `Volgende halte: <b>${ST[cur].naam}</b>`}</p></div>
     <div class="roadwrap"><svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
       <path class="r-edge" d="${d}" stroke-width="62"/><path class="r-asph" d="${d}" stroke-width="50"/>
       <path class="r-dash" d="${d}" stroke-width="3" stroke-dasharray="16 14"/>
       <path class="r-done" d="${dDone}" stroke-width="5"/>
     </svg>${marks}</div>`;
-  if (from !== pk) walkPingo(from, pk, pts, segs, W, H);
+  if (from !== pk) walkPingo(from, pk, pts, segs, W, H); else centerOnPingo();
   st.pk = pk; save(); setTimeout(checkBack, 60);
   const cp = app.querySelector('.pin.cur'); if (cp && !document.activeElement.closest('.side')) cp.focus({ preventScroll: true });
   app.querySelectorAll('[data-skip]').forEach(b => b.onclick = () => skipTest(+b.dataset.skip));
   app.querySelectorAll('.pin').forEach(b => b.onclick = () => lesson(+b.dataset.u));
 }
 
-// tips per hoofdstuk (0-2, 3 = finish) en per niveau (1-3)
-const TIPS = [
- { 1:['Typ <code>pwd</code> als je niet meer weet waar je bent.','Met <kbd>Tab</kbd> vult de terminal namen voor je aan.','<code>cd</code> zonder iets erachter brengt je altijd terug naar je thuismap.'],
-   2:['<code>cd -</code> springt terug naar de map waar je net was.','Combineer opties: <code>ls -la</code> is hetzelfde als <code>ls -l -a</code>.','Bestanden die met een punt beginnen zijn verborgen. <code>ls -a</code> laat ze zien.'],
-   3:['<code>ls -lhS</code> sorteert op grootte, met leesbare groottes.','<code>man ls</code> geeft de volledige handleiding. Zoek erin met <code>/</code>.','Met <kbd>Ctrl</kbd>+<kbd>R</kbd> zoek je terug in je eerdere commando’s.'] },
- { 1:['Gebruik <code>-i</code> bij <code>cp</code> en <code>mv</code>: dan vraagt de terminal eerst voordat iets wordt overschreven.','<code>less</code> sluit je af met <code>q</code>.','Spaties in een naam? Zet de naam tussen aanhalingstekens.'],
-   2:['<code>mkdir -p a/b/c</code> maakt alle tussenmappen in één keer.','<code>grep -i</code> negeert hoofdletters.','<code>head -n 5</code> en <code>tail -n 5</code> tonen het begin en het eind van een bestand.'],
-   3:['<code>grep -rn woord .</code> zoekt door alle submappen en toont regelnummers.','<code>find . -name "*.log" -mtime -1</code> vindt logbestanden van het afgelopen etmaal.','<code>tail -f</code> volgt een logbestand live. Stop met <kbd>Ctrl</kbd>+<kbd>C</kbd>.'] },
- { 1:['<kbd>Ctrl</kbd>+<kbd>C</kbd> stopt het commando dat nu loopt.','Gebruik <code>sudo</code> alleen als het echt nodig is.','<code>df -h</code> laat zien hoeveel schijfruimte er vrij is.'],
-   2:['Met <code>|</code> stuur je uitvoer door, bijvoorbeeld <code>ps aux | grep firefox</code>.','<code>&amp;&amp;</code> voert het tweede commando alleen uit als het eerste lukte.','Probeer eerst <code>pkill</code> voordat je <code>kill -9</code> gebruikt.'],
-   3:['<code>journalctl -b -p err</code> toont alle fouten sinds het opstarten.','<code>&gt;&gt;</code> voegt toe aan een bestand, <code>&gt;</code> overschrijft het.','<code>du -sh * | sort -h</code> laat zien welke mappen de meeste ruimte innemen.'] },
- { 1:['Twijfel je wat een commando doet? Typ er <code>--help</code> achter.','Oefen elk commando ook echt in je eigen terminal.','Lees de foutmelding: meestal staat erin wat er mis is.'],
-   2:['Twijfel je wat een commando doet? Typ er <code>--help</code> achter.','Gebruik <kbd>↑</kbd> om een vorig commando terug te halen en aan te passen.','Lees de foutmelding: meestal staat erin wat er mis is.'],
-   3:['Combineer wat je kent: <code>find</code>, <code>grep</code> en <code>|</code> samen lossen veel op.','<code>history | grep ssh</code> vindt een commando dat je eerder gebruikte.','Schrijf terugkerende stappen in een script en maak het uitvoerbaar met <code>chmod +x</code>.'] }
-];
-const tipFor = ch => { const l = TIPS[ch >= 0 ? CH[ch].tip : 3][TIER[st.set.lvl]] || TIPS[3][2]; return T(l[Math.floor(Math.random() * l.length)]); };
-// weggeklikte tip blijft de rest van de dag weg
-const tipKey = () => 'tt-tip-off-' + new Date().toDateString();
-let tipClosed = false;
-const tipOff = () => { if (tipClosed) return true; try { return localStorage.getItem(tipKey()) === '1'; } catch (e) { return false; } };
-function closeTip(btn) { tipClosed = true; try { localStorage.setItem(tipKey(), '1'); } catch (e) {} btn.parentElement.remove(); }
-const tipBox = (ch, extra) => `<div class="tip ${extra || ''}"><span class="tip-ic" aria-hidden="true">[i]</span><span><b>Tip:</b> ${tipFor(ch)}</span>${extra === 'home-tip' ? '<button class="tip-x" type="button" aria-label="Tip sluiten" title="Tip sluiten" onclick="closeTip(this)">×</button>' : ''}</div>`;
 
 let L;
 function lesson(i) {
@@ -931,7 +906,7 @@ function render(e) {
   } else {
     body = `<div class="answer-line" id="line" aria-label="Jouw commando"></div><div class="bank">${shuffle(e.tiles.map((t,i)=>[t,i])).map(([t,i])=>`<button class="tile" data-i="${i}" type="button">${esc(t)}</button>`).join('')}</div>`;
   }
-  app.innerHTML = header() + `<p class="kind">${L.skip !== undefined ? 'Overslaan-toets · ' : ''}${kinds[e.t]} · niveau ${LVN[st.set.lvl].toLowerCase()}</p><p class="q">${e.q}</p>` + body + tipBox(L.skip !== undefined ? L.skip : ST[L.s].ch, 'in-les');
+  app.innerHTML = header() + `<p class="kind">${L.skip !== undefined ? 'Overslaan-toets · ' : ''}${kinds[e.t]} · niveau ${LVN[st.set.lvl].toLowerCase()}</p><p class="q">${e.q}</p>` + body;
   document.getElementById('x').onclick = home;
   foot.hidden = false; foot.className = 'foot'; fb.innerHTML = ''; go.textContent = 'Controleer'; go.disabled = true;
   if (e.t === 'mc') {
@@ -1253,7 +1228,7 @@ function glossify(root) {
     const span = document.createElement('span'); span.innerHTML = html; node.replaceWith(...span.childNodes);
   });
   // commando's in de tekst: uitleg van commando en opties
-  root.querySelectorAll('.q code, .opt code, .tip code, .fb code').forEach(c => {
+  root.querySelectorAll('.q code, .opt code, .fb code').forEach(c => {
     if (c.dataset.tip) return;
     const rows = explain(c.textContent); if (!rows.length || /het commando|the command|argument/.test(rows[0][1])) return;
     c.dataset.tip = rows.map(([t, d]) => t + ': ' + d).join('\n'); c.classList.add('gc'); c.tabIndex = 0;
